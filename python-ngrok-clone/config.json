@@ -1,0 +1,9 @@
+{
+    "log_file": "ngrok_clone.log",
+    "cert_file": "selfsigned_cert.pem",
+    "key_file": "private_key.pem",
+    "server_port": 5000,
+    "allowed_api_keys": ["example_api_key_123"],
+    "max_connections": 10,
+    "domain": "mysecuretunnel.io"
+}

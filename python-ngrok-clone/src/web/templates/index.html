@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ngrok Clone Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #333;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+        section {
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        button {
+            padding: 5px 10px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Ngrok Clone Dashboard</h1>
+    </header>
+    <section>
+        <h2>Active Tunnels</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Tunnel ID</th>
+                    <th>Local Address</th>
+                    <th>Public URL</th>
+                    <th>Protocol</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tunnels">
+                <!-- Tunnels will be dynamically loaded here -->
+            </tbody>
+        </table>
+        <button onclick="showCreateTunnelForm()">Create Tunnel</button>
+    </section>
+    <section id="create-tunnel-form" style="display: none;">
+        <h2>Create Tunnel</h2>
+        <form onsubmit="createTunnel(event)">
+            <label for="local_address">Local Address:</label>
+            <input type="text" id="local_address" required>
+            <label for="protocol">Protocol:</label>
+            <select id="protocol">
+                <option value="http">HTTP</option>
+                <option value="tcp">TCP</option>
+            </select>
+            <button type="submit">Create</button>
+        </form>
+    </section>
+    <section>
+        <h2>Logs</h2>
+        <pre id="logs"></pre>
+    </section>
+    <section>
+        <h2>Server Metrics</h2>
+        <ul>
+            <li>Active Tunnels: <span id="active-tunnels">0</span></li>
+            <li>Blocked IPs: <span id="blocked-ips">0</span></li>
+            <li>Active Connections: <span id="active-connections">0</span></li>
+        </ul>
+    </section>
+    <script>
+        async function loadTunnels() {
+            const response = await fetch('/api/tunnels');
+            const data = await response.json();
+            const tunnels = data.tunnels;
+            const tableBody = document.getElementById('tunnels');
+            tableBody.innerHTML = '';
+            tunnels.forEach(tunnel => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${tunnel.tunnel_id}</td>
+                    <td>${tunnel.local_address}</td>
+                    <td>${tunnel.public_address}</td>
+                    <td>${tunnel.protocol}</td>
+                    <td><button onclick="deleteTunnel('${tunnel.tunnel_id}')">Delete</button></td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        async function createTunnel(event) {
+            event.preventDefault();
+            const localAddress = document.getElementById('local_address').value;
+            const protocol = document.getElementById('protocol').value;
+            const response = await fetch('/api/tunnels', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ local_address: localAddress, protocol: protocol })
+            });
+            if (response.ok) {
+                loadTunnels();
+                document.getElementById('create-tunnel-form').style.display = 'none';
+            }
+        }
+
+        async function deleteTunnel(tunnelId) {
+            await fetch(`/api/tunnels/${tunnelId}`, { method: 'DELETE' });
+            loadTunnels();
+        }
+
+        function showCreateTunnelForm() {
+            document.getElementById('create-tunnel-form').style.display = 'block';
+        }
+
+        async function loadLogs() {
+            const response = await fetch('/api/logs');
+            const data = await response.json();
+            document.getElementById('logs').textContent = data.logs.join('');
+        }
+
+        async function loadMetrics() {
+            const response = await fetch('/api/metrics');
+            const data = await response.json();
+            document.getElementById('active-tunnels').textContent = data.active_tunnels;
+            document.getElementById('blocked-ips').textContent = data.blocked_ips.join(', ');
+            document.getElementById('active-connections').textContent = data.active_connections;
+        }
+
+        loadTunnels();
+        loadLogs();
+        loadMetrics();
+        setInterval(loadTunnels, 5000);
+        setInterval(loadLogs, 5000);
+        setInterval(loadMetrics, 5000);
+    </script>
+</body>
+</html>
